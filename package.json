@@ -1,0 +1,21 @@
+{
+  "name": "syllabus-planner",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Upload class syllabi (PDF/image), auto-extract assignments, tests, and quizzes, then build a workload-balanced calendar and study plan.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node test/parse.test.mjs"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.124.0",
+    "pdfjs-dist": "^4.7.76",
+    "tesseract.js": "^5.1.1"
+  }
+}
