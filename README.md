@@ -1,12 +1,17 @@
 # Syllabus Planner
 
+**Live: https://kellyc515.github.io/syllabus-planner/**
+
 Drop in a class syllabus (PDF or a photo/screenshot). The app reads the text,
 pulls out every assignment, quiz, test, project and paper with a due date, lays
 them on a calendar, and builds a **workload‑balanced study plan** so prep work
 gets spread across your lighter days instead of piling up.
 
-Everything runs in your browser. No account, no server — your syllabi and plan
-never leave your machine (stored in `localStorage`, exportable as JSON).
+Everything runs in your browser and is stored in `localStorage` (per‑device,
+exportable as JSON). The only network call is the optional automatic extraction,
+which sends the syllabus to the Anthropic API using a key you paste into Settings
+— the key stays in your browser and is never committed or exported. Pushing to
+`main` redeploys the live site via GitHub Actions (`.github/workflows/deploy.yml`).
 
 ## Run it
 
