@@ -45,12 +45,13 @@ export function computePlan(items, settings, existingBlocks = []) {
     return dayLoad[key];
   };
 
-  // 1) Place the deadlines themselves (day-of effort).
+  // 1) Place the deadlines themselves (day-of effort). Completed items still
+  //    show on the calendar but stop counting toward the day's workload.
   for (const it of items) {
     if (!it.date) continue;
     const d = touch(it.date);
     const dayOf = PLAN_TYPES.has(it.type) ? Math.min(it.effortHours, 2) : it.effortHours;
-    d.dueHours += dayOf;
+    if (!it.done) d.dueHours += dayOf;
     d.items.push(it);
   }
 
@@ -66,7 +67,7 @@ export function computePlan(items, settings, existingBlocks = []) {
   const studyBlocks = [];
   if (s.planStudyBlocks) {
     const planItems = items
-      .filter((it) => PLAN_TYPES.has(it.type) && it.date && it.date >= todayKey())
+      .filter((it) => PLAN_TYPES.has(it.type) && it.date && it.date >= todayKey() && !it.done)
       .sort((a, b) => a.date.localeCompare(b.date));
 
     for (const it of planItems) {
@@ -140,13 +141,13 @@ export function computePlan(items, settings, existingBlocks = []) {
     d.total = round1(d.dueHours + d.studyHours);
     const cap = capForDay(key, s);
     if (d.total > cap) d.flags.push(`Packed: ${d.total}h planned (cap ${cap}h)`);
-    const bigDue = d.items.filter((it) => ['final', 'midterm', 'exam'].includes(it.type));
+    const bigDue = d.items.filter((it) => !it.done && ['final', 'midterm', 'exam'].includes(it.type));
     if (bigDue.length >= 2) d.flags.push(`${bigDue.length} exams same day`);
   }
 
   // 4) Cross-day crunch: 2+ exams within 3 days.
   const examDays = items
-    .filter((it) => ['final', 'midterm', 'exam'].includes(it.type) && it.date)
+    .filter((it) => ['final', 'midterm', 'exam'].includes(it.type) && it.date && !it.done)
     .map((it) => it.date)
     .sort();
   for (let i = 1; i < examDays.length; i++) {
@@ -161,14 +162,16 @@ export function computePlan(items, settings, existingBlocks = []) {
 export function summarize(items, dayLoad) {
   const now = todayKey();
   const upcoming = items
-    .filter((it) => it.date && it.date >= now)
+    .filter((it) => it.date && it.date >= now && !it.done)
     .sort((a, b) => a.date.localeCompare(b.date));
   const packedDays = Object.entries(dayLoad)
     .filter(([k, d]) => k >= now && d.flags.some((f) => f.startsWith('Packed')))
     .map(([k]) => k)
     .sort();
+  const doneCount = items.filter((it) => it.done).length;
   return {
     totalItems: items.length,
+    doneCount,
     upcomingCount: upcoming.length,
     next: upcoming[0] || null,
     packedDays,

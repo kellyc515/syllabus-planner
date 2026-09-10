@@ -150,6 +150,7 @@ export function parseClaudeItems(raw, { courseId, courseName, termStartKey } = {
       date,
       weightPct: weightPct == null ? null : Math.round(weightPct * 10) / 10,
       effortHours: Math.round(effortHours * 2) / 2,
+      done: false,
       courseId,
       course: courseName || '',
       source: 'Claude',

@@ -106,12 +106,26 @@ export function mergeItems(newItems, courseId) {
   });
 }
 
-// Re-extraction: drop everything for this course, then add the new set.
+export function toggleDone(id) {
+  update((s) => {
+    const it = s.items.find((x) => x.id === id);
+    if (it) it.done = !it.done;
+  });
+}
+
+// Re-extraction: drop everything for this course, then add the new set —
+// carrying over the "done" checkmarks for items that still match.
 export function replaceCourseItems(newItems, courseId) {
   update((s) => {
+    const doneKeys = new Set(
+      s.items
+        .filter((it) => it.courseId === courseId && it.done)
+        .map((it) => `${it.type}|${(it.title || '').toLowerCase()}|${it.date}`)
+    );
     s.items = s.items.filter((it) => it.courseId !== courseId);
     for (const it of newItems) {
       it.courseId = courseId;
+      if (doneKeys.has(`${it.type}|${(it.title || '').toLowerCase()}|${it.date}`)) it.done = true;
       s.items.push(it);
     }
     s.items.sort((a, b) => (a.date || '').localeCompare(b.date || ''));

@@ -1,7 +1,7 @@
 import './style.css';
 import {
   getState, subscribe, update, addCourse, removeCourse, courseById, courseColor,
-  mergeItems, replaceCourseItems, itemCountForCourse, exportJson, importJson, resetAll,
+  mergeItems, replaceCourseItems, itemCountForCourse, toggleDone, exportJson, importJson, resetAll,
 } from './store.js';
 import { extractText } from './extract.js';
 import { parseSyllabus, guessTermStart, TYPES, DEFAULT_EFFORT, cryptoId } from './parse.js';
@@ -307,7 +307,8 @@ function reviewView() {
      </select>`;
 
   const gradedRow = (it) => `
-    <tr data-id="${it.id}">
+    <tr data-id="${it.id}" class="${it.done ? 'row-done' : ''}">
+      <td><input type="checkbox" data-f="done" ${it.done ? 'checked' : ''} title="Mark complete" /></td>
       <td>${kindSelect(it)}</td>
       <td><select data-f="type">${TYPES.map(
         (t) => `<option ${t === it.type ? 'selected' : ''}>${t}</option>`
@@ -352,10 +353,16 @@ function reviewView() {
         }
       </p>
 
-      <h2>Graded — assignments, quizzes, exams, papers</h2>
+      <h2>Graded — assignments, quizzes, exams, papers${
+        !isStaged && graded.length
+          ? ` <span class="muted" style="font-size:0.9rem;font-weight:400;">· ${
+              graded.filter((it) => it.done).length
+            } of ${graded.length} done</span>`
+          : ''
+      }</h2>
       <div class="table-scroll"><table class="grid">
-        <thead><tr><th>Kind</th><th>Type</th><th>Title</th><th>Class</th><th>Date</th><th>Weight %</th><th>Effort h</th><th></th></tr></thead>
-        <tbody>${graded.map(gradedRow).join('') || `<tr><td colspan="8" class="muted">None.</td></tr>`}</tbody>
+        <thead><tr><th>✓</th><th>Kind</th><th>Type</th><th>Title</th><th>Class</th><th>Date</th><th>Weight %</th><th>Effort h</th><th></th></tr></thead>
+        <tbody>${graded.map(gradedRow).join('') || `<tr><td colspan="9" class="muted">None.</td></tr>`}</tbody>
       </table></div>
       <button class="btn ghost" data-act="add-row">+ Add graded row</button>
 
@@ -406,6 +413,14 @@ function calendarView() {
       </div>
 
       ${
+        sum.totalItems
+          ? `<p class="muted" style="margin:0 0 0.5rem;">${sum.doneCount} of ${sum.totalItems} done ·
+             ${sum.upcomingCount} still ahead${
+              sum.next ? ` · next: ${escapeHtml(sum.next.title)} (${prettyDate(sum.next.date)})` : ''
+            }</p>`
+          : ''
+      }
+      ${
         sum.packedDays.length
           ? `<div class="banner warn">⚠️ ${sum.packedDays.length} packed day(s) ahead:
              ${sum.packedDays.slice(0, 6).map((d) => prettyDate(d)).join(', ')}
@@ -445,9 +460,9 @@ function dayCell(key, month, sel) {
   const chips = (d?.items || [])
     .map(
       (it) =>
-        `<span class="ev" style="--c:${courseColor(it.courseId)}" title="${escapeAttr(
+        `<span class="ev ${it.done ? 'done' : ''}" style="--c:${courseColor(it.courseId)}" title="${escapeAttr(
           it.title
-        )}">${iconFor(it.type)} ${escapeHtml(shorten(it.title, 16))}</span>`
+        )}">${it.done ? '✓' : iconFor(it.type)} ${escapeHtml(shorten(it.title, 16))}</span>`
     )
     .join('');
   const study = (d?.blocks || [])
@@ -480,11 +495,15 @@ function dayPanel(key) {
           ? `<h3>Due</h3><ul class="plain">${d.items
               .map(
                 (it) =>
-                  `<li><span class="dot" style="--c:${courseColor(it.courseId)}"></span>
-                   ${iconFor(it.type)} <strong>${escapeHtml(it.title)}</strong>
-                   <span class="muted">${courseById(it.courseId)?.name || ''} · ${it.type}${
+                  `<li class="${it.done ? 'done' : ''}">
+                   <label class="check">
+                     <input type="checkbox" data-done="${it.id}" ${it.done ? 'checked' : ''} />
+                     <span class="dot" style="--c:${courseColor(it.courseId)}"></span>
+                     ${iconFor(it.type)} <strong>${escapeHtml(it.title)}</strong>
+                     <span class="muted">${courseById(it.courseId)?.name || ''} · ${it.type}${
                     it.weightPct ? ` · ${it.weightPct}%` : ''
-                  }</span></li>`
+                  }</span>
+                   </label></li>`
               )
               .join('')}</ul>`
           : ''
@@ -1075,7 +1094,7 @@ function wireReview() {
     row.querySelectorAll('[data-f]').forEach((input) => {
       input.addEventListener('change', () => {
         const f = input.dataset.f;
-        let val = input.value;
+        let val = input.type === 'checkbox' ? input.checked : input.value;
         if (f === 'weightPct' || f === 'effortHours') val = val === '' ? null : Number(val);
         const apply = (it) => {
           if (!it) return;
@@ -1121,6 +1140,7 @@ function wireReview() {
             date: todayKey(),
             weightPct: null,
             effortHours: DEFAULT_EFFORT.assignment,
+            done: false,
             courseId: cid,
             confirmed: true,
           };
@@ -1164,6 +1184,9 @@ function wireCalendar() {
     b.addEventListener('click', () =>
       update((s) => (s.ui.selectedDate = s.ui.selectedDate === b.dataset.day ? null : b.dataset.day))
     )
+  );
+  app.querySelectorAll('[data-done]').forEach((cb) =>
+    cb.addEventListener('change', () => toggleDone(cb.dataset.done))
   );
   app.querySelectorAll('[data-block-hours]').forEach((inp) =>
     inp.addEventListener('change', () => {

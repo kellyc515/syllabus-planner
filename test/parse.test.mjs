@@ -78,6 +78,17 @@ const { dayLoad } = computePlan(items, { termStartKey: '2026-08-20', dailyCapHou
 const over = Object.entries(dayLoad).filter(([, d]) => d.total > 4.01);
 console.log(over.length ? `note   ${over.length} day(s) still over cap (expected if week is full)` : 'ok     no day over cap');
 
+// Completed items drop out of the workload
+const hw = items.find((i) => i.title === 'Homework 1');
+const before = computePlan(items, { termStartKey: '2026-08-20' }, []).dayLoad[hw.date].total;
+const after = computePlan(
+  items.map((i) => (i.id === hw.id ? { ...i, done: true } : i)),
+  { termStartKey: '2026-08-20' },
+  []
+).dayLoad[hw.date].total;
+console.log(after < before ? `ok     completing an item drops its load (${before}h -> ${after}h)` : `WRONG  done load: ${before} -> ${after}`);
+if (!(after < before)) fail++;
+
 // --- Claude bridge: tolerant JSON parsing ---------------------------------
 const claudeReplies = [
   '[{"type":"quiz","title":"Quiz 1","date":"2026-09-08","weightPct":5,"effortHours":2}]',

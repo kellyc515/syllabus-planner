@@ -226,6 +226,7 @@ table.grid select { width: 100%; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ev.study { border-left-color: transparent; background: var(--accent-soft); color: var(--accent); }
+.ev.done { opacity: 0.5; text-decoration: line-through; }
 .flag {
   position: absolute; top: 3px; right: 4px; width: 16px; height: 16px;
   background: var(--heavy); color: #fff; border-radius: 50%;
@@ -239,6 +240,13 @@ table.grid select { width: 100%; }
 ul.plain { list-style: none; padding: 0; margin: 0.25rem 0; }
 ul.plain li { padding: 0.3rem 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
 ul.plain li:last-child { border-bottom: 0; }
+ul.plain li.done { opacity: 0.55; }
+ul.plain li.done strong { text-decoration: line-through; }
+label.check { display: flex; align-items: baseline; gap: 0.4rem; cursor: pointer; }
+label.check input[type='checkbox'] { flex: 0 0 auto; align-self: center; width: 15px; height: 15px; }
+table.grid tr.row-done { opacity: 0.5; }
+table.grid tr.row-done input[data-f='title'] { text-decoration: line-through; }
+table.grid td input[type='checkbox'] { width: 15px; height: 15px; }
 .dot, .day .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--muted)); }
 
 /* class schedule */

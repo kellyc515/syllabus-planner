@@ -168,6 +168,7 @@ export function parseSyllabus(text, { termStartKey, defaultCourseName } = {}) {
       date,
       weightPct: extractWeight(line),
       effortHours: DEFAULT_EFFORT[type] ?? 2,
+      done: false,
       course: defaultCourseName || '',
       source: line.slice(0, 200),
       confirmed: false,
