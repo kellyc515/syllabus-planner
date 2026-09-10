@@ -60,17 +60,23 @@ export async function aiExtract(opts, ctx = {}) {
 
   let resp;
   try {
-    resp = await client.messages.create({
+    // Extraction is a structured, low-reasoning task — keep effort (and thus
+    // thinking-token spend) low, and give the response plenty of room so a long
+    // syllabus (60+ rows) doesn't get truncated mid-array. Stream so the big
+    // max_tokens doesn't trip an HTTP timeout.
+    const stream = client.messages.stream({
       model,
-      max_tokens: 8000,
+      max_tokens: 32000,
+      output_config: { effort: 'low' },
       messages: [{ role: 'user', content }],
     });
+    resp = await stream.finalMessage();
   } catch (err) {
     throw friendlyError(err);
   }
 
   if (resp.stop_reason === 'refusal') {
-    throw new Error('Claude declined to process this document. Try the manual steps below.');
+    throw new Error('Claude declined to process this document. Use the manual steps below.');
   }
 
   const out = resp.content
@@ -79,12 +85,22 @@ export async function aiExtract(opts, ctx = {}) {
     .join('\n')
     .trim();
 
-  const items = parseClaudeItems(out, {
-    courseId: ctx.courseId,
-    courseName: ctx.courseName,
-    termStartKey: ctx.termStartKey,
-  });
-  return { items, usage: resp.usage, model: resp.model };
+  let items;
+  try {
+    items = parseClaudeItems(out, {
+      courseId: ctx.courseId,
+      courseName: ctx.courseName,
+      termStartKey: ctx.termStartKey,
+    });
+  } catch (err) {
+    if (resp.stop_reason === 'max_tokens') {
+      throw new Error(
+        'This syllabus is long and the response was cut off. Try again — or switch the model to Sonnet 5 in Settings, or split the syllabus.'
+      );
+    }
+    throw err;
+  }
+  return { items, usage: resp.usage, model: resp.model, truncated: resp.stop_reason === 'max_tokens' };
 }
 
 // (estCostCents lives in bridge.js so the Settings/bridge views can show cost

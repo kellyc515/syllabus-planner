@@ -50,21 +50,35 @@ ${
 }
 
 // Pull a JSON array out of whatever Claude sent back (fenced, prefixed prose,
-// or an object wrapper like {"items": [...]}).
+// an object wrapper like {"items": [...]}, or a response that got cut off before
+// the closing "]").
 function extractJsonArray(raw) {
   if (!raw) throw new Error('empty response');
   let s = raw.trim();
   // strip ```json ... ``` fences
   s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
   // object wrapper?
-  const objMatch = s.match(/"(?:items|assignments|events|data)"\s*:\s*(\[[\s\S]*\])/);
-  if (objMatch) return objMatch[1];
-  const start = s.indexOf('[');
-  const end = s.lastIndexOf(']');
-  if (start === -1 || end === -1 || end < start) {
-    throw new Error('no JSON array found in the response');
+  const objMatch = s.match(/"(?:items|assignments|events|data)"\s*:\s*\[/);
+  const start = objMatch ? s.indexOf('[', objMatch.index) : s.indexOf('[');
+  if (start === -1) throw new Error('no JSON array found in the response');
+
+  const body = s.slice(start);
+  const end = body.lastIndexOf(']');
+  const candidates = [];
+  if (end > 0) candidates.push(body.slice(0, end + 1));
+  // salvage: truncated mid-array — keep up to the last complete object
+  const lastObj = body.lastIndexOf('}');
+  if (lastObj > 0) candidates.push(body.slice(0, lastObj + 1) + ']');
+
+  for (const c of candidates) {
+    try {
+      JSON.parse(c);
+      return c;
+    } catch {
+      /* try the next candidate */
+    }
   }
-  return s.slice(start, end + 1);
+  throw new Error('the response was cut off before a complete list — try again');
 }
 
 function normalizeType(t, category) {

@@ -117,5 +117,17 @@ const brk = c.find((x) => x.title === 'Thanksgiving');
 if (!brk || brk.type !== 'break' || 'effortHours' in brk) { console.log(`WRONG  class item shape: ${JSON.stringify(brk)}`); fail++; }
 else console.log('ok     class item has note/type, no effortHours');
 
+// --- truncated / cut-off response is salvaged --------------------------
+const truncated =
+  '[\n {"category":"graded","type":"quiz","title":"Quiz 1","date":"2026-09-08","weightPct":1,"effortHours":1.5},\n {"category":"graded","type":"exam","title":"Exam 1","date":"2026-10-15","weightPct":15,"effortHours":6},\n {"category":"graded","type":"pa';
+try {
+  const salv = parseClaudeItems(truncated, { termStartKey: '2026-08-20' });
+  console.log(salv.length === 2 ? `ok     salvaged ${salv.length} items from a cut-off response` : `WRONG  salvage: ${salv.length}`);
+  if (salv.length !== 2) fail++;
+} catch (e) {
+  console.log(`WRONG  salvage threw: ${e.message}`);
+  fail++;
+}
+
 console.log(fail ? `\n${fail} failure(s)` : '\nALL GOOD');
 process.exit(fail ? 1 : 0);
